@@ -91,9 +91,13 @@ type SearchForm = {
 
 export function SearchBar() {
   // const [popoverOpen, setPopoverOpen] = useState(false);
+  const router = useRouter();
   const [, setSearchValue] = useSearchValue();
   const [isSearching, setIsSearching] = useState(false);
   const pathname = usePathname();
+  
+  // Add a ref to track the previous pathname
+  const prevPathRef = useRef<string | null>(null);
 
   const form = useForm<SearchForm>({
     defaultValues: {
@@ -119,10 +123,35 @@ export function SearchBar() {
   const q = form.watch('q');
 
   useEffect(() => {
-    if (pathname !== '/mail/inbox') {
+    // Initialize prevPathRef on first render
+    if (prevPathRef.current === null) {
+      prevPathRef.current = pathname;
+      return;
+    }
+    
+    // Check if we're navigating between mail folders
+    const mailFolderRegex = /^\/mail\/([^\/]+)/;
+    const currentMatch = pathname.match(mailFolderRegex);
+    const prevMatch = prevPathRef.current.match(mailFolderRegex);
+    
+    // If we've navigated from one mail folder to another
+    if (currentMatch && prevMatch && currentMatch[1] !== prevMatch[1]) {
+      // Check if there are query parameters to clear
+      if (window.location.search) {
+        // Clear URL query parameters by replacing the URL with just the pathname
+        router.replace(pathname);
+      }
+      
+      // Reset the search state
+      resetSearch();
+    } else if (pathname !== '/mail/inbox' && prevPathRef.current === '/mail/inbox') {
+      // Maintain backward compatibility with existing logic
       resetSearch();
     }
-  }, [pathname]);
+    
+    // Update the previous path ref
+    prevPathRef.current = pathname;
+  }, [pathname, router, resetSearch]);
 
   const submitSearch = useCallback(
     async (data: SearchForm) => {
