@@ -2,6 +2,7 @@ import { pgTableCreator, text, timestamp, boolean, integer, jsonb, primaryKey } 
 import { defaultUserSettings } from '@zero/db/user_settings_default';
 import { unique } from 'drizzle-orm/pg-core';
 import type { WritingStyleMatrix } from '@zero/mail/services/writing-style-service';
+import type { ThemeProperties } from '@zero/mail/types';
 
 export const createTable = pgTableCreator((name) => `mail0_${name}`);
 
@@ -75,6 +76,18 @@ export const earlyAccess = createTable('early_access', {
   hasUsedTicket: text('has_used_ticket').default(''),
 });
 
+export const theme = createTable('theme', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  isPublic: boolean('is_public').notNull().default(false),
+  properties: jsonb('properties').$type<ThemeProperties>().notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
 export const connection = createTable(
   'connection',
   {
@@ -89,6 +102,7 @@ export const connection = createTable(
     refreshToken: text('refresh_token'),
     scope: text('scope').notNull(),
     providerId: text('provider_id').notNull(),
+    themeId: text('theme_id').references(() => theme.id),
     expiresAt: timestamp('expires_at').notNull(),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),

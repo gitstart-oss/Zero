@@ -1,46 +1,61 @@
-import { processIP, getRatelimitModule, checkRateLimit, getAuthenticatedUserId } from '../../utils';
-import { NextRequest, NextResponse } from 'next/server';
-import { Ratelimit } from '@upstash/ratelimit';
-import { connection } from '@zero/db/schema';
-import { IConnection } from '@/types';
-import { eq } from 'drizzle-orm';
 import { db } from '@zero/db';
+import { connection } from '@zero/db/schema';
+import { getServerSession } from '@/lib/auth';
+import { eq, and } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-export const GET = async (req: NextRequest) => {
+const updateConnectionSchema = z.object({
+  themeId: z.string().nullable().optional(),
+});
+
+export async function PUT(request: Request) {
   try {
-    const userId = await getAuthenticatedUserId();
-    const finalIp = processIP(req);
-    const ratelimit = getRatelimitModule({
-      prefix: `ratelimit:get-connections-${userId}`,
-      limiter: Ratelimit.slidingWindow(60, '1m'),
-    });
-    const { success, headers } = await checkRateLimit(ratelimit, finalIp);
-    if (!success) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429, headers },
-      );
+    const session = await getServerSession();
+    
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    if (!userId) return NextResponse.json([], { status: 401 });
-    const connections = (await db
-      .select({
-        id: connection.id,
-        email: connection.email,
-        name: connection.name,
-        picture: connection.picture,
-        createdAt: connection.createdAt,
+    
+    const url = new URL(request.url);
+    const connectionId = url.pathname.split('/').pop();
+    
+    if (!connectionId) {
+      return NextResponse.json({ error: 'Connection ID is required' }, { status: 400 });
+    }
+    
+    const body = await request.json();
+    const validatedData = updateConnectionSchema.parse(body);
+    
+    const existingConnection = await db.query.connection.findFirst({
+      where: and(
+        eq(connection.id, connectionId),
+        eq(connection.userId, session.user.id)
+      ),
+    });
+    
+    if (!existingConnection) {
+      return NextResponse.json({ error: 'Connection not found' }, { status: 404 });
+    }
+    
+    const updatedConnection = await db.update(connection)
+      .set({
+        themeId: validatedData.themeId,
+        updatedAt: new Date(),
       })
-      .from(connection)
-      .where(eq(connection.userId, userId))) as IConnection[];
-
-    return NextResponse.json(connections, {
-      status: 200,
-      headers,
-    });
+      .where(and(
+        eq(connection.id, connectionId),
+        eq(connection.userId, session.user.id)
+      ))
+      .returning();
+    
+    return NextResponse.json(updatedConnection[0]);
   } catch (error) {
-    return NextResponse.json([], {
-      status: 400,
-    });
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ error: error.errors }, { status: 400 });
+    }
+    
+    console.error('Error updating connection:', error);
+    return NextResponse.json({ error: 'Failed to update connection' }, { status: 500 });
   }
-};
+}

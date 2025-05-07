@@ -13,6 +13,10 @@ import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
+import { useThemes } from '@/hooks/use-themes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
+import { useState } from 'react';
 
 export const AddConnectionDialog = ({
   children,
@@ -24,6 +28,8 @@ export const AddConnectionDialog = ({
   onOpenChange?: (open: boolean) => void;
 }) => {
   const t = useTranslations();
+  const { data: themes } = useThemes();
+  const [selectedThemeId, setSelectedThemeId] = useState<string>('');
 
   return (
     <Dialog onOpenChange={onOpenChange}>
@@ -49,6 +55,22 @@ export const AddConnectionDialog = ({
             {t('pages.settings.connections.connectEmailDescription')}
           </DialogDescription>
         </DialogHeader>
+        <div className="mb-4">
+          <Label htmlFor="theme-select">Theme</Label>
+          <Select value={selectedThemeId} onValueChange={setSelectedThemeId}>
+            <SelectTrigger id="theme-select">
+              <SelectValue placeholder="Select a theme" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Default Theme</SelectItem>
+              {themes?.map((theme) => (
+                <SelectItem key={theme.id} value={theme.id}>
+                  {theme.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <motion.div
           className="mt-4 grid grid-cols-2 gap-4"
           initial={{ opacity: 0 }}
@@ -70,6 +92,7 @@ export const AddConnectionDialog = ({
                 onClick={async () =>
                   await authClient.linkSocial({
                     provider: provider.providerId,
+                    themeId: selectedThemeId || undefined,
                   })
                 }
               >

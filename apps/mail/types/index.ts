@@ -1,5 +1,71 @@
 import { Label } from '@/hooks/use-labels';
 
+export interface ThemeProperties {
+  colors: {
+    background: string;
+    foreground: string;
+    card: string;
+    cardForeground: string;
+    popover: string;
+    popoverForeground: string;
+    primary: string;
+    primaryForeground: string;
+    secondary: string;
+    secondaryForeground: string;
+    muted: string;
+    mutedForeground: string;
+    accent: string;
+    accentForeground: string;
+    destructive: string;
+    destructiveForeground: string;
+    border: string;
+    input: string;
+    ring: string;
+    sidebar: {
+      background: string;
+      foreground: string;
+      primary: string;
+      primaryForeground: string;
+      accent: string;
+      accentForeground: string;
+      border: string;
+      ring: string;
+    };
+  };
+  font: string; // Google Font name
+  fontSize: {
+    base: string;
+    small: string;
+    large: string;
+  };
+  spacing: {
+    base: string;
+    small: string;
+    medium: string;
+    large: string;
+  };
+  borderRadius: {
+    small: string;
+    medium: string;
+    large: string;
+  };
+  shadows: {
+    small: string;
+    medium: string;
+    large: string;
+  };
+}
+
+export interface Theme {
+  id: string;
+  name: string;
+  userId: string;
+  isPublic: boolean;
+  properties: ThemeProperties;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface User {
   name: string;
   email: string;

@@ -19,14 +19,17 @@ import { emailProviders } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/auth-client';
 import { useTranslations } from 'next-intl';
-import { Trash, Plus } from 'lucide-react';
+import { Trash, Plus, Palette } from 'lucide-react';
 import { useState } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
+import { useThemes } from '@/hooks/use-themes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ConnectionsPage() {
   const { refetch } = useSession();
   const { data: connections, mutate, isLoading } = useConnections();
+  const { data: themes } = useThemes();
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
   const t = useTranslations();
 
@@ -123,7 +126,45 @@ export default function ConnectionsPage() {
                       </div>
                     </div>
                   </div>
-                  <Dialog>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      defaultValue={connection.themeId || ""}
+                      onValueChange={async (value) => {
+                        try {
+                          // Update connection theme
+                          const response = await fetch(`/api/driver/connections/${connection.id}`, {
+                            method: 'PUT',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ themeId: value || null }),
+                          });
+                          
+                          if (!response.ok) {
+                            throw new Error('Failed to update theme');
+                          }
+                          
+                          await mutate();
+                          toast.success('Theme updated');
+                        } catch (error) {
+                          console.error('Error updating theme:', error);
+                          toast.error('Failed to update theme');
+                        }
+                      }}
+                    >
+                      <SelectTrigger className="w-[130px]">
+                        <SelectValue placeholder="Theme" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Default Theme</SelectItem>
+                        {themes?.map((theme) => (
+                          <SelectItem key={theme.id} value={theme.id}>
+                            {theme.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Dialog>
                     <DialogTrigger asChild>
                       <Button
                         variant="ghost"
