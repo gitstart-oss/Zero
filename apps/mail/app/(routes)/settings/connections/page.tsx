@@ -9,10 +9,18 @@ import {
   DialogTrigger,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { SettingsCard } from '@/components/settings/settings-card';
 import { AddConnectionDialog } from '@/components/connection/add';
 import { useConnections } from '@/hooks/use-connections';
+import { useThemes } from '@/hooks/use-themes';
 import { useTRPC } from '@/providers/query-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMutation } from '@tanstack/react-query';
@@ -20,18 +28,41 @@ import { emailProviders } from '@/lib/constants';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/lib/auth-client';
 import { useTranslations } from 'next-intl';
-import { Trash, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { Trash, Plus, Palette } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { toast } from 'sonner';
 
 export default function ConnectionsPage() {
-  const { data, isLoading, refetch: refetchConnections } = useConnections();
+  const { data, isLoading, refetch: refetchConnections, updateConnectionTheme } = useConnections();
+  const { themes } = useThemes();
   const { refetch } = useSession();
   const [openTooltip, setOpenTooltip] = useState<string | null>(null);
   const t = useTranslations();
   const trpc = useTRPC();
   const { mutateAsync: deleteConnection } = useMutation(trpc.connections.delete.mutationOptions());
+
+  // Check for pending theme association after OAuth flow
+  useEffect(() => {
+    const pendingThemeId = localStorage.getItem('pendingConnectionThemeId');
+    const connections = data?.connections;
+    
+    if (pendingThemeId && connections && connections.length > 0) {
+      // Find the most recently added connection (likely the one just created)
+      const sortedConnections = [...connections].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      
+      const newestConnection = sortedConnections[0];
+      
+      if (newestConnection) {
+        // Associate the theme with the connection
+        updateConnectionTheme(newestConnection.id, pendingThemeId);
+        // Clear the pending theme ID
+        localStorage.removeItem('pendingConnectionThemeId');
+      }
+    }
+  }, [data?.connections, updateConnectionTheme]);
 
   const disconnectAccount = async (connectionId: string) => {
     await deleteConnection(
@@ -46,6 +77,14 @@ export default function ConnectionsPage() {
     toast.success(t('pages.settings.connections.disconnectSuccess'));
     refetchConnections();
     refetch();
+  };
+  
+  const handleThemeChange = async (connectionId: string, themeId: string | null) => {
+    try {
+      await updateConnectionTheme(connectionId, themeId);
+    } catch (error) {
+      console.error('Error updating connection theme:', error);
+    }
   };
 
   return (
@@ -126,6 +165,27 @@ export default function ConnectionsPage() {
                             <div className="font-mono">{connection.email}</div>
                           </TooltipContent>
                         </Tooltip>
+                      </div>
+                      
+                      {/* Theme selection */}
+                      <div className="mt-2 flex items-center gap-2">
+                        <Palette className="text-muted-foreground h-3 w-3" />
+                        <Select
+                          value={connection.themeId || ''}
+                          onValueChange={(value) => handleThemeChange(connection.id, value || null)}
+                        >
+                          <SelectTrigger className="h-7 text-xs">
+                            <SelectValue placeholder="Default theme" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="">Default theme</SelectItem>
+                            {themes?.map((theme) => (
+                              <SelectItem key={theme.id} value={theme.id}>
+                                {theme.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                   </div>
