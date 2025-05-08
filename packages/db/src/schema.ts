@@ -82,6 +82,19 @@ export const earlyAccess = createTable('early_access', {
   hasUsedTicket: text('has_used_ticket').default(''),
 });
 
+export const theme = createTable('theme', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description'),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id),
+  isPublic: boolean('is_public').notNull().default(false),
+  properties: jsonb('properties').notNull(),
+  createdAt: timestamp('created_at').notNull(),
+  updatedAt: timestamp('updated_at').notNull(),
+});
+
 export const connection = createTable(
   'connection',
   {
@@ -96,6 +109,7 @@ export const connection = createTable(
     refreshToken: text('refresh_token'),
     scope: text('scope').notNull(),
     providerId: text('provider_id').notNull(),
+    themeId: text('theme_id').references(() => theme.id),
     expiresAt: timestamp('expires_at').notNull(),
     createdAt: timestamp('created_at').notNull(),
     updatedAt: timestamp('updated_at').notNull(),

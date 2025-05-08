@@ -6,6 +6,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '../ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { useBilling } from '@/hooks/use-billing';
 import { emailProviders } from '@/lib/constants';
 import { authClient } from '@/lib/auth-client';
@@ -15,7 +22,8 @@ import { useTranslations } from 'next-intl';
 import { Button } from '../ui/button';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+import { useThemes } from '@/hooks/use-themes';
 
 export const AddConnectionDialog = ({
   children,
@@ -27,6 +35,8 @@ export const AddConnectionDialog = ({
   onOpenChange?: (open: boolean) => void;
 }) => {
   const { connections, attach } = useBilling();
+  const { themes } = useThemes();
+  const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   const t = useTranslations();
 
   const pathname = usePathname();
@@ -86,6 +96,27 @@ export const AddConnectionDialog = ({
               $20<span className="text-muted-foreground -ml-2 text-xs">/month</span>
             </Button>
           </div>
+          
+          {/* Theme selection */}
+          <div className="mt-4">
+            <label className="text-sm font-medium">Theme</label>
+            <Select value={selectedThemeId || ''} onValueChange={(value) => setSelectedThemeId(value || null)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Default theme" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Default theme</SelectItem>
+                {themes?.map((theme) => (
+                  <SelectItem key={theme.id} value={theme.id}>
+                    {theme.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Select a theme for this connection or use the default theme
+            </p>
+          </div>
         )}
         <motion.div
           className="mt-4 grid grid-cols-2 gap-4"
@@ -106,12 +137,17 @@ export const AddConnectionDialog = ({
                 disabled={!canCreateConnection}
                 variant="outline"
                 className="h-24 w-full flex-col items-center justify-center gap-2"
-                onClick={async () =>
+                onClick={async () => {
+                  // Store selected theme ID in localStorage to retrieve after OAuth flow
+                  if (selectedThemeId) {
+                    localStorage.setItem('pendingConnectionThemeId', selectedThemeId);
+                  }
+                  
                   await authClient.linkSocial({
                     provider: provider.providerId,
                     callbackURL: pathname,
-                  })
-                }
+                  });
+                }}
               >
                 <svg viewBox="0 0 24 24" className="h-12 w-12">
                   <path fill="currentColor" d={provider.icon} />

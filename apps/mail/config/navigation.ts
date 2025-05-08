@@ -160,6 +160,11 @@ export const navigationConfig: Record<string, NavConfig> = {
             icon: Stars,
           },
           {
+            title: 'navigation.settings.marketplace',
+            url: '/settings/marketplace',
+            icon: Sparkles,
+          },
+          {
             title: 'navigation.settings.labels',
             url: '/settings/labels',
             icon: Sheet,
