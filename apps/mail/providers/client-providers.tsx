@@ -3,6 +3,7 @@
 import { AISidebarProvider } from '@/components/ui/ai-sidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { PostHogProvider } from '@/lib/posthog-provider';
+import { ThemeProvider as CustomThemeProvider } from '@/components/providers/theme-provider';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import { Analytics } from '@vercel/analytics/react';
 import { useSettings } from '@/hooks/use-settings';
@@ -26,13 +27,15 @@ export function ClientProviders({ children }: PropsWithChildren) {
             disableTransitionOnChange
             defaultTheme={theme}
           >
-            <SidebarProvider>
-              <PostHogProvider>
-                {children}
-                <CustomToaster />
-                <Analytics />
-              </PostHogProvider>
-            </SidebarProvider>
+            <CustomThemeProvider>
+              <SidebarProvider>
+                <PostHogProvider>
+                  {children}
+                  <CustomToaster />
+                  <Analytics />
+                </PostHogProvider>
+              </SidebarProvider>
+            </CustomThemeProvider>
           </ThemeProvider>
         </JotaiProvider>
       </AISidebarProvider>
