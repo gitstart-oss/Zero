@@ -1,10 +1,11 @@
 import { connectionToDriver, getActiveConnection } from '../lib/server-utils';
 import { Ratelimit, type RatelimitConfig } from '@upstash/ratelimit';
 import type { HonoContext, HonoVariables } from '../ctx';
+import { StandardizedError } from '../lib/driver/utils';
 import { initTRPC, TRPCError } from '@trpc/server';
+import { env } from 'cloudflare:workers';
 import { redis } from '../lib/services';
 import superjson from 'superjson';
-
 type TrpcContext = {
   c: HonoContext;
 } & HonoVariables;
@@ -23,26 +24,40 @@ export const privateProcedure = publicProcedure.use(async ({ ctx, next }) => {
 });
 
 export const activeConnectionProcedure = privateProcedure.use(async ({ ctx, next }) => {
-  const activeConnection = await getActiveConnection(ctx.c).catch((err: unknown) => {
+  try {
+    const activeConnection = await getActiveConnection(ctx.c);
+    return next({ ctx: { ...ctx, activeConnection } });
+  } catch (err) {
+    await ctx.c.var.auth.api.signOut({ headers: ctx.c.req.raw.headers });
     throw new TRPCError({
       code: 'BAD_REQUEST',
       message: err instanceof Error ? err.message : 'Failed to get active connection',
     });
-  });
-  return next({ ctx: { ...ctx, activeConnection } });
+  }
 });
 
 export const activeDriverProcedure = activeConnectionProcedure.use(async ({ ctx, next }) => {
   const { activeConnection } = ctx;
   const driver = connectionToDriver(activeConnection, ctx.c);
-  return next({ ctx: { ...ctx, driver } });
+  const res = await next({ ctx: { ...ctx, driver } });
+
+  // This is for when the user has not granted the required scopes for GMail
+  if (!res.ok && res.error.message === 'Precondition check failed.') {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Required scopes missing',
+      cause: res.error,
+    });
+  }
+
+  return res;
 });
 
 export const brainServerAvailableMiddleware = t.middleware(async ({ next, ctx }) => {
   return next({
     ctx: {
       ...ctx,
-      brainServerAvailable: !!ctx.c.env.BRAIN_URL,
+      brainServerAvailable: !!env.BRAIN_URL,
     },
   });
 });
@@ -50,7 +65,7 @@ export const brainServerAvailableMiddleware = t.middleware(async ({ next, ctx })
 export const processIP = (c: HonoContext) => {
   const cfIP = c.req.header('CF-Connecting-IP');
   const ip = c.req.header('x-forwarded-for');
-  if (!ip && !cfIP && c.env.NODE_ENV === 'production') {
+  if (!ip && !cfIP && env.NODE_ENV === 'production') {
     console.log('No IP detected');
     throw new Error('No IP detected');
   }
@@ -65,7 +80,7 @@ export const createRateLimiterMiddleware = (config: {
 }) =>
   t.middleware(async ({ next, ctx, input }) => {
     const ratelimiter = new Ratelimit({
-      redis: redis(ctx.c.env),
+      redis: redis(),
       limiter: config.limiter,
       analytics: true,
       prefix: config.generatePrefix(ctx, input),

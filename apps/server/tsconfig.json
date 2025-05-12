@@ -25,7 +25,8 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
 
-    "composite": true
+    "composite": true,
+    "types": ["@types/node"]
   },
   "include": ["src/**/*.ts", "worker-configuration.d.ts"]
 }
