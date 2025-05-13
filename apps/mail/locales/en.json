@@ -369,7 +369,10 @@
         "connectEmailDescription": "Select an email provider to connect",
         "moreComingSoon": "More coming soon",
         "reconnect": "Reconnect",
-        "disconnected": "Disconnected"
+        "disconnected": "Disconnected",
+        "orderDescription": "Drag and drop to reorder accounts. This order affects how emails are displayed in your inbox.",
+        "orderSaved": "Account order saved successfully",
+        "orderSaveError": "Failed to save account order"
       },
       "security": {
         "title": "Security",
