@@ -136,19 +136,12 @@ function ComposeButton() {
   const [, setActiveReplyId] = useQueryState('activeReplyId');
   const [, setMode] = useQueryState('mode');
 
-  const handleOpenChange = async (open: boolean) => {
-    if (!open) {
-      // Clear all query params at once for faster closing
-      await Promise.all([
-        setDialogOpen(null),
-        setDraftId(null),
-        setTo(null),
-        setActiveReplyId(null),
-        setMode(null)
-      ]);
-    } else {
-      setDialogOpen('true');
-    }
+  const handleOpenChange = (open: boolean) => {
+    setDialogOpen(open ? 'true' : null);
+    setDraftId(null);
+    setTo(null);
+    setActiveReplyId(null);
+    setMode(null);
   };
   return (
     <Dialog open={!!dialogOpen} onOpenChange={handleOpenChange}>

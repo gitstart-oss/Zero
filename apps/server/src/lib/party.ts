@@ -25,7 +25,7 @@ export class DurableMailbox extends Server<Env> {
     if (token) {
       const session = await this.getSession(token);
       if (session) {
-        await this.ctx.storage.put('email', session.user.email);
+        this.ctx.storage.put('email', session.user.email);
       } else {
         console.log('No session', token);
       }

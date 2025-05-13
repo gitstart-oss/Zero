@@ -1,5 +1,4 @@
 import { cleanEmailAddresses } from '../lib/email-utils';
-import { getContext } from 'hono/context-storage';
 import type { HonoContext } from '../ctx';
 import { serverTrpc } from '../trpc';
 
@@ -96,13 +95,10 @@ async function parseMailtoUrl(mailtoUrl: string) {
 }
 
 // Function to create a draft and get its ID
-async function createDraftFromMailto(mailtoData: {
-  to: string;
-  subject: string;
-  body: string;
-  cc?: string;
-  bcc?: string;
-}) {
+async function createDraftFromMailto(
+  c: HonoContext,
+  mailtoData: { to: string; subject: string; body: string; cc?: string; bcc?: string },
+) {
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 1000; // 1 second
 
@@ -194,7 +190,7 @@ async function createDraftFromMailto(mailtoData: {
       try {
         console.log(`Attempt ${attempt} to create draft...`);
 
-        const result = await serverTrpc().drafts.create(draftData);
+        const result = await serverTrpc(c).drafts.create(draftData);
 
         if (result?.id) {
           console.log('Draft created successfully with ID:', result.id);
@@ -246,8 +242,7 @@ async function createDraftFromMailto(mailtoData: {
   return null;
 }
 
-export async function mailtoHandler() {
-  const c = getContext<HonoContext>();
+export async function mailtoHandler(c: HonoContext) {
   if (!c.var.session?.user) return c.redirect(`${c.env.NEXT_PUBLIC_APP_URL}/login`);
 
   // Get the mailto parameter from the URL
@@ -262,7 +257,7 @@ export async function mailtoHandler() {
   if (!mailtoData) return c.redirect(`${c.env.NEXT_PUBLIC_APP_URL}/mail/compose`);
 
   // Create a draft from the mailto data
-  const draftId = await createDraftFromMailto(mailtoData);
+  const draftId = await createDraftFromMailto(c, mailtoData);
 
   // If draft creation failed, redirect to empty compose with the parsed data as a fallback
   if (!draftId) {

@@ -1,6 +1,9 @@
-import type { env } from 'cloudflare:workers';
-import type { Auth } from './lib/auth';
-import type { DB } from '@zero/db';
+import { type Auth } from './lib/auth';
+import { type Context } from 'hono';
+import { type DB } from '@zero/db';
+
+// @ts-ignore
+export type AppEnv = Env;
 
 export type HonoVariables = {
   auth: Auth;
@@ -8,4 +11,4 @@ export type HonoVariables = {
   db: DB;
 };
 
-export type HonoContext = { Variables: HonoVariables; Bindings: typeof env };
+export type HonoContext = Context<{ Variables: HonoVariables; Bindings: AppEnv }>;
