@@ -1,4 +1,5 @@
 import { connectionToDriver, getActiveConnection } from '../lib/server-utils';
+import { getContext } from 'hono/context-storage';
 import { AiChatPrompt } from '../lib/prompts';
 import type { HonoContext } from '../ctx';
 import { openai } from '@ai-sdk/openai';
@@ -6,29 +7,36 @@ import { Autumn } from 'autumn-js';
 import { streamText } from 'ai';
 import { z } from 'zod';
 
-export const chatHandler = async (c: HonoContext) => {
+export const chatHandler = async () => {
+  const c = getContext<HonoContext>();
+
   const { session } = c.var;
   if (!session) return c.json({ error: 'Unauthorized' }, 401);
 
+  console.log('Checking chat permissions for user:', session.user.id);
   const canSendMessages = await Autumn.check({
     feature_id: 'chat-messages',
     customer_id: session.user.id,
   });
+  console.log('Autumn check result:', JSON.stringify(canSendMessages, null, 2));
 
   if (!canSendMessages.data) {
+    console.log('No data returned from Autumn check');
     return c.json({ error: 'Insufficient permissions' }, 403);
   }
 
-  if (!canSendMessages.data.balance && !canSendMessages.data.unlimited) {
+  if (canSendMessages.data.unlimited) {
+    console.log('User has unlimited access');
+  } else if (!canSendMessages.data.balance) {
+    console.log('No balance and not unlimited');
     return c.json({ error: 'Insufficient plan quota' }, 403);
-  }
-
-  if ((canSendMessages.data.balance ?? 0) <= 0) {
+  } else if (canSendMessages.data.balance <= 0) {
+    console.log('Balance is 0 or less');
     return c.json({ error: 'Insufficient plan balance' }, 403);
   }
 
-  const driver = await getActiveConnection(c)
-    .then((conn) => connectionToDriver(conn, c))
+  const driver = await getActiveConnection()
+    .then(connectionToDriver)
     .catch((err) => {
       console.error('Error in getActiveConnection:', err);
       throw c.json({ error: 'Failed to get active connection' }, 500);

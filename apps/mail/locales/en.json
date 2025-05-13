@@ -367,7 +367,9 @@
         "addEmail": "Add Connection",
         "connectEmail": "Connect Email",
         "connectEmailDescription": "Select an email provider to connect",
-        "moreComingSoon": "More coming soon"
+        "moreComingSoon": "More coming soon",
+        "reconnect": "Reconnect",
+        "disconnected": "Disconnected"
       },
       "security": {
         "title": "Security",
@@ -437,7 +439,8 @@
           "selectAll": "Select All",
           "commandPalette": "Command Palette",
           "markAsRead": "Mark as Read",
-          "exitSelectionMode": "Exit Selection Mode"
+          "exitSelectionMode": "Exit Selection Mode",
+          "closeCompose": "Close Compose"
         }
       },
       "labels": {
@@ -501,5 +504,10 @@
         }
       }
     }
+  },
+  "errorMessages": {
+    "required_scopes_missing": "We’re missing the permissions needed to craft your full experience. Please sign in again and allow the requested access.",
+    "early_access_required": "Early access is required to log in",
+    "unauthorized": "Zero could not load your data from the 3rd party provider. Please try again."
   }
 }

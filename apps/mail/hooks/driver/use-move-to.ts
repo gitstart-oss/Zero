@@ -79,6 +79,9 @@ const useMoveTo = () => {
       },
       finally: async () => {
         setIsLoading(false);
+        trpc.queryClient.invalidateQueries({
+          queryKey: trpc.mail.listThreads.queryKey(),
+        });
         await Promise.all([refetchThreads(), refetchStats()]);
         trpc.mail.listThreads.invalidate({ folder: destination });
         for (const threadId of threadIds) {

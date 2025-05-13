@@ -1,4 +1,5 @@
 import { cleanEmailAddresses } from '../lib/email-utils';
+import { getContext } from 'hono/context-storage';
 import type { HonoContext } from '../ctx';
 import { serverTrpc } from '../trpc';
 
@@ -95,10 +96,13 @@ async function parseMailtoUrl(mailtoUrl: string) {
 }
 
 // Function to create a draft and get its ID
-async function createDraftFromMailto(
-  c: HonoContext,
-  mailtoData: { to: string; subject: string; body: string; cc?: string; bcc?: string },
-) {
+async function createDraftFromMailto(mailtoData: {
+  to: string;
+  subject: string;
+  body: string;
+  cc?: string;
+  bcc?: string;
+}) {
   const MAX_RETRIES = 3;
   const RETRY_DELAY = 1000; // 1 second
 
@@ -190,7 +194,7 @@ async function createDraftFromMailto(
       try {
         console.log(`Attempt ${attempt} to create draft...`);
 
-        const result = await serverTrpc(c).drafts.create(draftData);
+        const result = await serverTrpc().drafts.create(draftData);
 
         if (result?.id) {
           console.log('Draft created successfully with ID:', result.id);
@@ -242,26 +246,27 @@ async function createDraftFromMailto(
   return null;
 }
 
-export async function mailtoHandler(c: HonoContext) {
-  if (!c.var.session?.user) return c.redirect('/login');
+export async function mailtoHandler() {
+  const c = getContext<HonoContext>();
+  if (!c.var.session?.user) return c.redirect(`${c.env.NEXT_PUBLIC_APP_URL}/login`);
 
   // Get the mailto parameter from the URL
   const mailto = c.req.query('mailto');
 
-  if (!mailto) return c.redirect('/mail/compose');
+  if (!mailto) return c.redirect(`${c.env.NEXT_PUBLIC_APP_URL}/mail/compose`);
 
   // Parse the mailto URL
   const mailtoData = await parseMailtoUrl(mailto);
 
   // If parsing failed, redirect to empty compose
-  if (!mailtoData) return c.redirect('/mail/compose');
+  if (!mailtoData) return c.redirect(`${c.env.NEXT_PUBLIC_APP_URL}/mail/compose`);
 
   // Create a draft from the mailto data
-  const draftId = await createDraftFromMailto(c, mailtoData);
+  const draftId = await createDraftFromMailto(mailtoData);
 
   // If draft creation failed, redirect to empty compose with the parsed data as a fallback
   if (!draftId) {
-    const fallbackUrl = new URL('/mail/compose', c.req.url);
+    const fallbackUrl = new URL(`${c.env.NEXT_PUBLIC_APP_URL}/mail/compose`);
     if (mailtoData.to) fallbackUrl.searchParams.append('to', mailtoData.to);
     if (mailtoData.subject) fallbackUrl.searchParams.append('subject', mailtoData.subject);
     if (mailtoData.body) fallbackUrl.searchParams.append('body', mailtoData.body);
@@ -271,5 +276,5 @@ export async function mailtoHandler(c: HonoContext) {
   }
 
   // Redirect to compose with the draft ID
-  return c.redirect(`/mail/compose?draftId=${draftId}`);
+  return c.redirect(`${c.env.NEXT_PUBLIC_APP_URL}/mail/compose?draftId=${draftId}`);
 }
