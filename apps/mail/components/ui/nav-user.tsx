@@ -82,6 +82,8 @@ export function NavUser() {
     queryClient.clear();
     await idbClear();
     toast.success('Cache cleared successfully');
+    // Reload the page after clearing the cache
+    setTimeout(() => window.location.reload(), 500);
   }, []);
 
   const { customer } = useCustomer();
@@ -97,10 +99,6 @@ export function NavUser() {
 
   useEffect(() => setIsRendered(true), []);
 
-  const refetchBrainLabels = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: trpc.brain.getLabels.queryKey() });
-  }, [queryClient]);
-
   const handleAccountSwitch = (connectionId: string) => async () => {
     await setDefaultConnection({ connectionId });
     refetch();
@@ -108,8 +106,6 @@ export function NavUser() {
     refetchThreads();
     refetchLabels();
     refetchStats();
-    refetchBrainState();
-    refetchBrainLabels();
   };
 
   const handleLogout = async () => {
@@ -117,9 +113,9 @@ export function NavUser() {
       loading: 'Signing out...',
       success: () => 'Signed out successfully!',
       error: 'Error signing out',
-      async finally() {
-        await handleClearCache();
-        window.location.href = '/login';
+      finally() {
+        handleClearCache();
+        router.push('/login');
       },
     });
   };
@@ -535,7 +531,7 @@ export function NavUser() {
                 <BadgeCheck className="h-4 w-4 text-white dark:text-[#141414]" fill="#1D9BF0" />
               )}
             </div>
-            <div className="max-w-[200px] overflow-hidden truncate text-xs font-normal leading-none text-[#898989]">
+            <div className="max-w-[150px] overflow-hidden truncate text-xs font-normal leading-none text-[#898989]">
               {activeAccount?.email || session.user.email}
             </div>
           </div>

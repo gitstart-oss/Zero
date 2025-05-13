@@ -28,7 +28,6 @@ import {
 import { CircleAlertIcon, Inbox, ShieldAlertIcon, StopCircleIcon } from 'lucide-react';
 import { moveThreadsTo, type ThreadDestination } from '@/lib/thread-actions';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMailNavigation } from '@/hooks/use-mail-navigation';
 import { focusedIndexAtom } from '@/hooks/use-mail-navigation';
 import { backgroundQueueAtom } from '@/store/backgroundQueue';
@@ -38,6 +37,7 @@ import { useAISidebar } from '@/components/ui/ai-sidebar';
 import { useHotkeysContext } from 'react-hotkeys-hook';
 import { MailDisplaySkeleton } from './mail-skeleton';
 import { useTRPC } from '@/providers/query-provider';
+import { useMutation } from '@tanstack/react-query';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { useStats } from '@/hooks/use-stats';
@@ -154,9 +154,10 @@ export function ThreadDisplay() {
   const params = useParams<{ folder: string }>();
   const folder = params?.folder ?? 'inbox';
   const [id, setThreadId] = useQueryState('threadId');
-  const { data: emailData, isLoading, refetch: refetchThread } = useThread(id ?? null);
+  const { data: emailData, isLoading, refetch: refetchThreads } = useThread(id ?? null);
   const [{ refetch: mutateThreads }, items] = useThreads();
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mail, setMail] = useMail();
   const [isStarred, setIsStarred] = useState(false);
   const t = useTranslations();
   const { refetch: refetchStats } = useStats();
@@ -167,13 +168,7 @@ export function ThreadDisplay() {
   const { resolvedTheme } = useTheme();
   const [focusedIndex, setFocusedIndex] = useAtom(focusedIndexAtom);
   const trpc = useTRPC();
-  const queryClient = useQueryClient();
-  const { mutateAsync: toggleStar } = useMutation(trpc.mail.toggleStar.mutationOptions());
-  const invalidateCount = () =>
-    queryClient.invalidateQueries({ queryKey: trpc.mail.count.queryKey() });
-  const { mutateAsync: markAsRead } = useMutation(
-    trpc.mail.markAsRead.mutationOptions({ onSuccess: () => invalidateCount() }),
-  );
+  const { mutateAsync: markAsRead } = useMutation(trpc.mail.markAsRead.mutationOptions());
   const [, setIsComposeOpen] = useQueryState('isComposeOpen');
 
   const handlePrevious = useCallback(() => {
@@ -233,7 +228,7 @@ export function ThreadDisplay() {
           console.error('Failed to mark email as read:', error);
           toast.error(t('common.mail.failedToMarkAsRead'));
         })
-        .then(() => Promise.allSettled([refetchThread(), refetchStats()]));
+        .then(() => Promise.allSettled([refetchThreads(), refetchStats()]));
     }
   }, [emailData, id]);
 
@@ -278,7 +273,7 @@ export function ThreadDisplay() {
       toast.promise(promise, {
         error: t('common.actions.failedToMove'),
         finally: async () => {
-          await Promise.all([refetchStats(), refetchThread()]);
+          await Promise.all([refetchStats(), refetchThreads()]);
           //   setBackgroundQueue({ type: 'delete', threadId: `thread:${threadId}` });
         },
       });
@@ -297,9 +292,8 @@ export function ThreadDisplay() {
     } else {
       toast.success(t('common.actions.removedFromFavorites'));
     }
-    await toggleStar({ ids: [id] });
-    await refetchThread();
-  }, [emailData, id, isStarred]);
+    mutateThreads();
+  }, [emailData, id, isStarred, mutateThreads, t]);
 
   // Set initial star state based on email data
   useEffect(() => {

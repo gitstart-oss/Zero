@@ -9,7 +9,6 @@ import { useQueryState } from 'nuqs';
 import { useState } from 'react';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
-import { useTRPC } from '@/providers/query-provider';
 
 const useMoveTo = () => {
   const t = useTranslations();
@@ -21,7 +20,6 @@ const useMoveTo = () => {
   const [, setFocusedIndex] = useAtom(focusedIndexAtom);
   const [, setThreadId] = useQueryState('threadId');
   const [, setActiveReplyId] = useQueryState('activeReplyId');
-  const trpc = useTRPC();
 
   const getCopyByDestination = (to?: MoveThreadOptions['destination']) => {
     switch (to) {
@@ -79,9 +77,6 @@ const useMoveTo = () => {
       },
       finally: async () => {
         setIsLoading(false);
-        trpc.queryClient.invalidateQueries({
-          queryKey: trpc.mail.listThreads.queryKey(),
-        });
         await Promise.all([refetchThreads(), refetchStats()]);
         for (const threadId of threadIds) {
           deleteFromQueue(threadId);

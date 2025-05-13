@@ -1,4 +1,3 @@
-import { getContext } from 'hono/context-storage';
 import { connection } from '@zero/db/schema';
 import type { HonoContext } from '../../ctx';
 import { createDriver } from '../driver';
@@ -7,8 +6,7 @@ import { and, eq } from 'drizzle-orm';
 
 export const FatalErrors = ['invalid_grant'];
 
-export const deleteActiveConnection = async () => {
-  const c = getContext<HonoContext>();
+export const deleteActiveConnection = async (c: HonoContext) => {
   const session = await c.var.auth.api.getSession({ headers: c.req.raw.headers });
   if (!session?.connectionId) return console.log('No connection ID found');
   try {
@@ -22,8 +20,7 @@ export const deleteActiveConnection = async () => {
   }
 };
 
-export const getActiveDriver = async () => {
-  const c = getContext<HonoContext>();
+export const getActiveDriver = async (c: HonoContext) => {
   const session = await c.var.auth.api.getSession({ headers: c.req.raw.headers });
   if (!session || !session.connectionId) throw new Error('Invalid session');
 
@@ -40,6 +37,7 @@ export const getActiveDriver = async () => {
       refreshToken: activeConnection.refreshToken,
       email: activeConnection.email,
     },
+    c,
   });
 };
 

@@ -176,12 +176,7 @@ const Thread = memo(
     const [threadId] = useQueryState('threadId');
     const [, setBackgroundQueue] = useAtom(backgroundQueueAtom);
     const { refetch: refetchStats } = useStats();
-    const {
-      data: getThreadData,
-      isLoading,
-      isGroupThread,
-      refetch: refetchThread,
-    } = useThread(demo ? null : message.id);
+    const { data: getThreadData, isLoading, isGroupThread } = useThread(demo ? null : message.id);
     const [isStarred, setIsStarred] = useState(false);
     const trpc = useTRPC();
     const queryClient = useQueryClient();
@@ -209,7 +204,7 @@ const Thread = memo(
           toast.success(t('common.actions.removedFromFavorites'));
         }
         await toggleStar({ ids: [message.id] });
-        await refetchThread();
+        refetchThreads();
       },
       [getThreadData, message.id, isStarred, refetchThreads, t],
     );
@@ -613,7 +608,7 @@ const Thread = memo(
                     ) : (
                       <p
                         className={cn(
-                          'mt-1 line-clamp-1 w-full text-sm text-[#8C8C8C] min-w-0',
+                          'mt-1 line-clamp-1 max-w-[25ch] text-sm text-[#8C8C8C] sm:max-w-[50ch] md:max-w-[40ch]',
                         )}
                       >
                         {highlightText(latestMessage.subject, searchValue.highlight)}
@@ -1058,7 +1053,7 @@ function getLabelIcon(label: string) {
     case 'notes':
       return <StickyNote className="h-3.5 w-3.5" />;
     case 'starred':
-      return <Star className="h-3.5 w-3.5 fill-yellow-400 stroke-yellow-400" />;
+      return <Star className="h-3.5 w-3.5" />;
     default:
       return null;
   }
