@@ -83,7 +83,6 @@ const useMoveTo = () => {
           queryKey: trpc.mail.listThreads.queryKey(),
         });
         await Promise.all([refetchThreads(), refetchStats()]);
-        trpc.mail.listThreads.invalidate({ folder: destination });
         for (const threadId of threadIds) {
           deleteFromQueue(threadId);
         }
