@@ -47,7 +47,8 @@
       "save": "Save",
       "remove": "Remove",
       "settings": "Settings",
-      "exitSelectionModeEsc": "Click or press ESC to exit selection mode"
+      "exitSelectionModeEsc": "Click or press ESC to exit selection mode",
+      "delete": "Delete"
     },
     "themes": {
       "dark": "Dark",
@@ -292,7 +293,13 @@
       "failedToMute": "Failed to mute",
       "failedToUnmute": "Failed to unmute",
       "archived": "Archived",
-      "failedToArchive": "Failed to archive"
+      "failedToArchive": "Failed to archive",
+      "deleteSpam": "Delete All Spam",
+      "deleteSpamTitle": "Delete All Spam",
+      "deleteSpamDescription": "Are you sure you want to delete all spam emails? This action cannot be undone.",
+      "deletingSpam": "Deleting spam emails...",
+      "deletedSpam": "All spam emails deleted",
+      "failedToDeleteSpam": "Failed to delete spam emails"
     },
     "units": {
       "mb": "{amount} MB"

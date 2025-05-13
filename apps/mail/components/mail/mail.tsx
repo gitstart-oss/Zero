@@ -47,6 +47,7 @@ import { SidebarToggle } from '../ui/sidebar-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBrainState } from '@/hooks/use-summary';
 import { clearBulkSelectionAtom } from './use-mail';
+import useMoveTo from '@/hooks/driver/use-move-to';
 import { cleanSearchValue, cn } from '@/lib/utils';
 import { useThreads } from '@/hooks/use-threads';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -157,6 +158,66 @@ const AutoLabelingSettings = () => {
             }}
           >
             Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const DeleteAllSpamButton = () => {
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations();
+  const { mutate } = useMoveTo();
+  const [{ refetch: refetchThreads }, items] = useThreads();
+  const { refetch: refetchStats } = useStats();
+  const params = useParams<{ folder: string }>();
+  const folder = params?.folder ?? 'inbox';
+
+  const handleDeleteAllSpam = () => {
+    if (!items.length) return;
+
+    setIsLoading(true);
+    mutate({
+      threadIds: items.map((thread) => thread.id),
+      currentFolder: folder,
+      destination: 'bin',
+    })
+      ?.unwrap()
+      .then(() => {
+        refetchThreads();
+        refetchStats();
+      })
+      .finally(() => {
+        setIsLoading(false);
+        setIsConfirmOpen(false);
+      });
+  };
+
+  return (
+    <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+      <DialogTrigger asChild>
+        <Button
+          variant="destructive"
+          size="sm"
+          disabled={!items.length || isLoading}
+          className="mt-2 w-full"
+        >
+          {t('common.mail.deleteSpam')}
+        </Button>
+      </DialogTrigger>
+      <DialogContent showOverlay>
+        <DialogHeader>
+          <DialogTitle>{t('common.mail.deleteSpamTitle')}</DialogTitle>
+          <DialogDescription>{t('common.mail.deleteSpamDescription')}</DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={() => setIsConfirmOpen(false)} disabled={isLoading}>
+            {t('common.actions.cancel')}
+          </Button>
+          <Button variant="destructive" onClick={handleDeleteAllSpam} disabled={isLoading}>
+            {t('common.actions.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -301,30 +362,30 @@ export function MailLayout() {
                   <div>
                     <SidebarToggle className="h-fit px-2" />
                   </div>
-                 
+
                   <div className="flex items-center gap-2">
-                  <div>
-                    {mail.bulkSelected.length > 0 ? (
-                      <div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => {
-                                setMail({ ...mail, bulkSelected: [] });
-                              }}
-                              className="flex h-6 items-center gap-1 rounded-md bg-[#313131] px-2 text-xs text-[#A0A0A0] hover:bg-[#252525]"
-                            >
-                              <X className="h-3 w-3 fill-[#A0A0A0]" />
-                              <span>esc</span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t('common.actions.exitSelectionModeEsc')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    ) : null}
-                  </div>
+                    <div>
+                      {mail.bulkSelected.length > 0 ? (
+                        <div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => {
+                                  setMail({ ...mail, bulkSelected: [] });
+                                }}
+                                className="flex h-6 items-center gap-1 rounded-md bg-[#313131] px-2 text-xs text-[#A0A0A0] hover:bg-[#252525]"
+                              >
+                                <X className="h-3 w-3 fill-[#A0A0A0]" />
+                                <span>esc</span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t('common.actions.exitSelectionModeEsc')}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ) : null}
+                    </div>
                     {true ? <AutoLabelingSettings /> : null}
                     <Button
                       disabled={isEnablingBrain || isDisablingBrain}
@@ -359,6 +420,7 @@ export function MailLayout() {
                   {folder === 'inbox' && (
                     <CategorySelect isMultiSelectMode={mail.bulkSelected.length > 0} />
                   )}
+                  {folder === 'spam' && <DeleteAllSpamButton />}
                 </div>
               </div>
               <div
