@@ -47,6 +47,7 @@ import { SidebarToggle } from '../ui/sidebar-toggle';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useBrainState } from '@/hooks/use-summary';
 import { clearBulkSelectionAtom } from './use-mail';
+import useMoveTo from '@/hooks/driver/use-move-to';
 import { cleanSearchValue, cn } from '@/lib/utils';
 import { useThreads } from '@/hooks/use-threads';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -59,7 +60,6 @@ import { useQueryState } from 'nuqs';
 import { TagInput } from 'emblor';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
-import useMoveTo from '@/hooks/driver/use-move-to';
 
 interface Tag {
   id: string;
@@ -170,33 +170,39 @@ const DeleteAllSpamButton = () => {
   const [isLoading, setIsLoading] = useState(false);
   const t = useTranslations();
   const { mutate } = useMoveTo();
-  const [{ data: threads, refetch: refetchThreads }] = useThreads();
+  const [{ refetch: refetchThreads }, items] = useThreads();
   const { refetch: refetchStats } = useStats();
   const params = useParams<{ folder: string }>();
   const folder = params?.folder ?? 'inbox';
-  
+
   const handleDeleteAllSpam = () => {
-    if (!threads?.length) return;
-    
+    if (!items.length) return;
+
     setIsLoading(true);
     mutate({
-      threadIds: threads.map(thread => thread.id),
+      threadIds: items.map((thread) => thread.id),
       currentFolder: folder,
-      destination: 'bin'
-    }).finally(() => {
-      setIsLoading(false);
-      setIsConfirmOpen(false);
-    });
+      destination: 'bin',
+    })
+      ?.unwrap()
+      .then(() => {
+        refetchThreads();
+        refetchStats();
+      })
+      .finally(() => {
+        setIsLoading(false);
+        setIsConfirmOpen(false);
+      });
   };
-  
+
   return (
     <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
       <DialogTrigger asChild>
-        <Button 
-          variant="destructive" 
-          size="sm" 
-          disabled={!threads?.length || isLoading}
-          className="w-full mt-2"
+        <Button
+          variant="destructive"
+          size="sm"
+          disabled={!items.length || isLoading}
+          className="mt-2 w-full"
         >
           {t('common.mail.deleteSpam')}
         </Button>
@@ -204,23 +210,13 @@ const DeleteAllSpamButton = () => {
       <DialogContent showOverlay>
         <DialogHeader>
           <DialogTitle>{t('common.mail.deleteSpamTitle')}</DialogTitle>
-          <DialogDescription>
-            {t('common.mail.deleteSpamDescription')}
-          </DialogDescription>
+          <DialogDescription>{t('common.mail.deleteSpamDescription')}</DialogDescription>
         </DialogHeader>
         <DialogFooter className="mt-4">
-          <Button 
-            variant="outline" 
-            onClick={() => setIsConfirmOpen(false)}
-            disabled={isLoading}
-          >
+          <Button variant="outline" onClick={() => setIsConfirmOpen(false)} disabled={isLoading}>
             {t('common.actions.cancel')}
           </Button>
-          <Button 
-            variant="destructive" 
-            onClick={handleDeleteAllSpam}
-            disabled={isLoading}
-          >
+          <Button variant="destructive" onClick={handleDeleteAllSpam} disabled={isLoading}>
             {t('common.actions.delete')}
           </Button>
         </DialogFooter>
@@ -366,30 +362,30 @@ export function MailLayout() {
                   <div>
                     <SidebarToggle className="h-fit px-2" />
                   </div>
-                 
+
                   <div className="flex items-center gap-2">
-                  <div>
-                    {mail.bulkSelected.length > 0 ? (
-                      <div>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              onClick={() => {
-                                setMail({ ...mail, bulkSelected: [] });
-                              }}
-                              className="flex h-6 items-center gap-1 rounded-md bg-[#313131] px-2 text-xs text-[#A0A0A0] hover:bg-[#252525]"
-                            >
-                              <X className="h-3 w-3 fill-[#A0A0A0]" />
-                              <span>esc</span>
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {t('common.actions.exitSelectionModeEsc')}
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                    ) : null}
-                  </div>
+                    <div>
+                      {mail.bulkSelected.length > 0 ? (
+                        <div>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => {
+                                  setMail({ ...mail, bulkSelected: [] });
+                                }}
+                                className="flex h-6 items-center gap-1 rounded-md bg-[#313131] px-2 text-xs text-[#A0A0A0] hover:bg-[#252525]"
+                              >
+                                <X className="h-3 w-3 fill-[#A0A0A0]" />
+                                <span>esc</span>
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {t('common.actions.exitSelectionModeEsc')}
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      ) : null}
+                    </div>
                     {true ? <AutoLabelingSettings /> : null}
                     <Button
                       disabled={isEnablingBrain || isDisablingBrain}
