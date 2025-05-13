@@ -9,6 +9,7 @@ export const defaultUserSettings = {
   trustedSenders: [],
   isOnboarded: false,
   colorTheme: 'system',
+  accountOrder: [],
 } satisfies UserSettings;
 
 export const userSettingsSchema = z.object({
@@ -20,6 +21,7 @@ export const userSettingsSchema = z.object({
   isOnboarded: z.boolean().optional(),
   trustedSenders: z.string().array().optional(),
   colorTheme: z.enum(['light', 'dark', 'system']).default('system'),
+  accountOrder: z.string().array().optional().default([]),
 });
 
 export type UserSettings = z.infer<typeof userSettingsSchema>;

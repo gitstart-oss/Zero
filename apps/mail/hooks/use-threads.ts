@@ -3,6 +3,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useSearchValue } from '@/hooks/use-search-value';
 import { useTRPC } from '@/providers/query-provider';
 import { useSession } from '@/lib/auth-client';
+import { useSettings } from '@/hooks/use-settings';
 import { useAtom, useAtomValue } from 'jotai';
 import { useParams } from 'next/navigation';
 import { useQueryState } from 'nuqs';
@@ -12,6 +13,7 @@ export const useThreads = () => {
   const { folder } = useParams<{ folder: string }>();
   const [searchValue] = useSearchValue();
   const { data: session } = useSession();
+  const { data: settings } = useSettings();
   const [backgroundQueue] = useAtom(backgroundQueueAtom);
   const isInQueue = useAtomValue(isThreadInBackgroundQueueAtom);
   const trpc = useTRPC();
@@ -32,16 +34,58 @@ export const useThreads = () => {
     ),
   );
 
-  // Flatten threads from all pages and sort by receivedOn date (newest first)
+  // Flatten threads from all pages and sort by account order and then by receivedOn date
   const threads = useMemo(
-    () =>
-      threadsQuery.data
-        ? threadsQuery.data.pages
-            .flatMap((e) => e.threads)
-            .filter(Boolean)
-            .filter((e) => !isInQueue(`thread:${e.id}`))
-        : [],
-    [threadsQuery.data, session, backgroundQueue, isInQueue],
+    () => {
+      if (!threadsQuery.data) return [];
+      
+      const allThreads = threadsQuery.data.pages
+        .flatMap((e) => e.threads)
+        .filter(Boolean)
+        .filter((e) => !isInQueue(`thread:${e.id}`));
+      
+      // If no account order is specified, just sort by date (newest first)
+      if (!settings?.accountOrder?.length) {
+        return allThreads;
+      }
+      
+      // Sort threads by account order and then by date
+      return [...allThreads].sort((a, b) => {
+        // Get the connection IDs for the threads
+        const aConnectionId = a.latest?.connectionId;
+        const bConnectionId = b.latest?.connectionId;
+        
+        // If either thread doesn't have a connection ID, sort by date
+        if (!aConnectionId || !bConnectionId) {
+          return new Date(b.latest?.receivedOn || 0).getTime() - 
+                 new Date(a.latest?.receivedOn || 0).getTime();
+        }
+        
+        // Get the indices of the connection IDs in the account order
+        const aIndex = settings.accountOrder.indexOf(aConnectionId);
+        const bIndex = settings.accountOrder.indexOf(bConnectionId);
+        
+        // If both connection IDs are in the account order, sort by order
+        if (aIndex !== -1 && bIndex !== -1) {
+          if (aIndex !== bIndex) {
+            return aIndex - bIndex;
+          }
+        } 
+        // If only one connection ID is in the account order, prioritize it
+        else if (aIndex !== -1) {
+          return -1;
+        } 
+        else if (bIndex !== -1) {
+          return 1;
+        }
+        
+        // If neither connection ID is in the account order or they have the same order,
+        // sort by date (newest first)
+        return new Date(b.latest?.receivedOn || 0).getTime() - 
+               new Date(a.latest?.receivedOn || 0).getTime();
+      });
+    },
+    [threadsQuery.data, session, backgroundQueue, isInQueue, settings?.accountOrder],
   );
 
   const isEmpty = useMemo(() => threads.length === 0, [threads]);
