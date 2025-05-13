@@ -59,6 +59,7 @@ import { useQueryState } from 'nuqs';
 import { TagInput } from 'emblor';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
+import useMoveTo from '@/hooks/driver/use-move-to';
 
 interface Tag {
   id: string;
@@ -157,6 +158,70 @@ const AutoLabelingSettings = () => {
             }}
           >
             Save
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+const DeleteAllSpamButton = () => {
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const t = useTranslations();
+  const { mutate } = useMoveTo();
+  const [{ data: threads, refetch: refetchThreads }] = useThreads();
+  const { refetch: refetchStats } = useStats();
+  const params = useParams<{ folder: string }>();
+  const folder = params?.folder ?? 'inbox';
+  
+  const handleDeleteAllSpam = () => {
+    if (!threads?.length) return;
+    
+    setIsLoading(true);
+    mutate({
+      threadIds: threads.map(thread => thread.id),
+      currentFolder: folder,
+      destination: 'bin'
+    }).finally(() => {
+      setIsLoading(false);
+      setIsConfirmOpen(false);
+    });
+  };
+  
+  return (
+    <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+      <DialogTrigger asChild>
+        <Button 
+          variant="destructive" 
+          size="sm" 
+          disabled={!threads?.length || isLoading}
+          className="w-full mt-2"
+        >
+          {t('common.mail.deleteSpam')}
+        </Button>
+      </DialogTrigger>
+      <DialogContent showOverlay>
+        <DialogHeader>
+          <DialogTitle>{t('common.mail.deleteSpamTitle')}</DialogTitle>
+          <DialogDescription>
+            {t('common.mail.deleteSpamDescription')}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsConfirmOpen(false)}
+            disabled={isLoading}
+          >
+            {t('common.actions.cancel')}
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleDeleteAllSpam}
+            disabled={isLoading}
+          >
+            {t('common.actions.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -359,6 +424,7 @@ export function MailLayout() {
                   {folder === 'inbox' && (
                     <CategorySelect isMultiSelectMode={mail.bulkSelected.length > 0} />
                   )}
+                  {folder === 'spam' && <DeleteAllSpamButton />}
                 </div>
               </div>
               <div
