@@ -79,7 +79,6 @@ const useMoveTo = () => {
       },
       finally: async () => {
         setIsLoading(false);
-        // Invalidate all mail.listThreads queries to update both source and destination folders
         trpc.queryClient.invalidateQueries({
           queryKey: trpc.mail.listThreads.queryKey(),
         });
