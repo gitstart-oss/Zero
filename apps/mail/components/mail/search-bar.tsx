@@ -1,6 +1,6 @@
 import { parseNaturalLanguageSearch, parseNaturalLanguageDate } from '@/lib/utils';
 import { useSearchValue } from '@/hooks/use-search-value';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { type DateRange } from 'react-day-picker';
 import { Input } from '@/components/ui/input';
 import { usePathname } from 'next/navigation';
@@ -30,7 +30,6 @@ export function SearchBar() {
   const [, setSearchValue] = useSearchValue();
   const [isSearching, setIsSearching] = useState(false);
   const pathname = usePathname();
-  const prevPathRef = useRef(pathname);
 
   const form = useForm<SearchForm>({
     defaultValues: {
@@ -54,6 +53,12 @@ export function SearchBar() {
   });
 
   const q = form.watch('q');
+
+  useEffect(() => {
+    if (pathname !== '/mail/inbox') {
+      resetSearch();
+    }
+  }, [pathname]);
 
   const submitSearch = useCallback(
     async (data: SearchForm) => {
