@@ -55,13 +55,6 @@ export function SearchBar() {
 
   const q = form.watch('q');
 
-  useEffect(() => {
-    if (pathname !== prevPathRef.current && pathname.startsWith('/mail/')) {
-      resetSearch();
-    }
-    prevPathRef.current = pathname;
-  }, [pathname, resetSearch]);
-
   const submitSearch = useCallback(
     async (data: SearchForm) => {
       setIsSearching(true);

@@ -200,6 +200,7 @@ export function MailLayout() {
     trpc.brain.disableBrain.mutationOptions(),
   );
   const [threadId, setThreadId] = useQueryState('threadId');
+  const [, setCategory] = useQueryState('category');
   const { refetch: refetchBrainState } = useBrainState();
 
   useEffect(() => {
@@ -274,6 +275,13 @@ export function MailLayout() {
       }
     }
   }, []);
+
+  // Reset category in URL when user changes folder
+  useEffect(() => {
+    if(folder !== 'inbox') {
+      setCategory(null);
+    }
+  }, [folder])
 
   const category = useQueryState('category');
 
